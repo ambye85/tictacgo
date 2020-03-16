@@ -23,4 +23,10 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./...
-      - run: go test -v ./...
+      - run:
+          command: |-
+            curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+            chmod +x ./cc-test-reporter
+            ./cc-test-reporter before-build
+            go test -coverprofile c.out -v ./...
+            ./cc-test-reporter after-build --prefix github.com/ambye85/tictacgo -r ebfa419bdb47303701a2ab5ebafa84a04f0f202945441bcc9fd9739b23649f3e --exit-code $?
