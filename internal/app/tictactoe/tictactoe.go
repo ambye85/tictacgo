@@ -1,81 +1,75 @@
 package tictactoe
 
-type Board struct {
-	freeSpaces int
-}
-
-func NewBoard() Board {
-	return Board{
-		freeSpaces: 9,
-	}
-}
-
-func (b *Board) FreeSpaces() int {
-	return b.freeSpaces
-}
+const (
+	emptySpace               = -1
+	PlayerOne   PlayerNumber = 0
+	PlayerTwo   PlayerNumber = 1
+	HumanPlayer PlayerType   = iota + 1
+)
 
 type PlayerType int
+
+type PlayerNumber int
 
 type Player struct {
 	Kind PlayerType
 	Name string
 }
 
-const emptySpace = -1
+type GameOption func(*Game) error
 
-const (
-	HumanPlayer = iota + 1
-)
+func InitialPlayer(n PlayerNumber) GameOption {
+	return func(g *Game) error {
+		return g.initialPlayer(n)
+	}
+}
 
-type Config struct {
-	FirstPlayer   int
-	BoardSize     int
-	PlayerOneType PlayerType
-	PlayerOneName string
-	PlayerTwoType PlayerType
-	PlayerTwoName string
+func ConfigurePlayer(n PlayerNumber, t PlayerType, name string) GameOption {
+	return func(g *Game) error {
+		return g.configurePlayer(n, t, name)
+	}
 }
 
 type Game struct {
-	board []int
-	currentPlayer Player
+	board         []int
+	players       []Player
+	currentPlayer PlayerNumber
 }
 
-func CreateGame(config Config) Game {
-	if config.BoardSize == 0 {
-		config.BoardSize = 3
+func CreateGame(options ...GameOption) (*Game, error) {
+	playerOne := Player{Kind: HumanPlayer, Name: "First Player"}
+	playerTwo := Player{Kind: HumanPlayer, Name: "Second Player"}
+	board := make([]int, 9, 9)
+	for i := range board {
+		board[i] = emptySpace
 	}
 
-	playerOne := Player{}
-	playerOne.Kind = config.PlayerOneType
-	if config.PlayerOneName == "" {
-		playerOne.Name = "First Player"
-	} else {
-		playerOne.Name = config.PlayerOneName
+	game := &Game{
+		board:         board,
+		players:       []Player{playerOne, playerTwo},
+		currentPlayer: PlayerOne,
 	}
 
-	playerTwo := Player{}
-	playerTwo.Kind = config.PlayerTwoType
-	if config.PlayerTwoName == "" {
-		playerTwo.Name = "Second Player"
-	} else {
-		playerTwo.Name = config.PlayerTwoName
+	for _, option := range options {
+		err := option(game)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	initialPlayer := playerOne
-	if config.FirstPlayer == 2 {
-		initialPlayer = playerTwo
-	}
+	return game, nil
+}
 
-	var board []int
-	for i := 0; i < config.BoardSize * config.BoardSize; i++ {
-		board = append(board, emptySpace)
-	}
+func (g *Game) configurePlayer(n PlayerNumber, t PlayerType, name string) error {
+	p := &g.players[n]
+	p.Kind = t
+	p.Name = name
+	return nil
+}
 
-	return Game{
-		board: board,
-		currentPlayer: initialPlayer,
-	}
+func (g *Game) initialPlayer(n PlayerNumber) error {
+	g.currentPlayer = n
+	return nil
 }
 
 func (g *Game) AvailableSpaces() []int {
@@ -86,10 +80,6 @@ func (g *Game) AvailableSpaces() []int {
 	return available
 }
 
-func (g *Game) Board() []int {
-	return g.board
-}
-
 func (g *Game) CurrentPlayer() Player {
-	return g.currentPlayer
+	return g.players[g.currentPlayer]
 }
